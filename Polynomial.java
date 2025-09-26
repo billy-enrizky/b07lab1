@@ -6,243 +6,200 @@ import java.io.IOException;
 import java.util.Scanner;
 
 public class Polynomial {
-    double[] co;
-    int[] co_i;
+    double[] coefficients;
+    int[] exponents;
 
     public Polynomial() {
-        this.co = new double[1];
-        this.co_i = new int[1];
-        this.co[0] = 0.0;
-        this.co_i[0] = 0;
+        this.coefficients = new double[]{0.0};
+        this.exponents = new int[]{0};
     }
 
-    public Polynomial(double[] coe, int[] coe_i) {
-        this.co = coe;
-        this.co_i = coe_i;
+    public Polynomial(double[] new_coefficient, int[] new_exponent) {
+        this.coefficients = new_coefficient;
+        this.exponents = new_exponent;
     }
 
     public Polynomial(File f){
         try (Scanner scanner = new Scanner(f)) {
-            String pol = scanner.nextLine();
-            parsePolynomialString(pol);
+            String polynomial_string = scanner.nextLine();
+            String modified_polynomial = polynomial_string.replaceAll("-", "\\+-");
+            String[] terms = modified_polynomial.split("\\+");
+            int terms_count = terms.length;
+            double[] new_coefficient = new double[terms_count];
+            int[] exponent_array = new int[terms_count];
+            for (int i = 0; i < terms_count; ++i) {
+                String current_term = terms[i];
+                if(current_term.contains("x")){
+                    String[] coefficient_exponent_parts = current_term.split("x");
+                    if (coefficient_exponent_parts.length == 2){
+                        // Handle coefficient and exponent
+                        String coefficient_string = coefficient_exponent_parts[0];
+                        if (coefficient_string.isEmpty() || coefficient_string.equals("+")) {
+                            new_coefficient[i] = 1.0;
+                        } else if (coefficient_string.equals("-")) {
+                            new_coefficient[i] = -1.0;
+                        } else {
+                            new_coefficient[i] = Double.parseDouble(coefficient_string);
+                        }
+                        
+                        String exponent_string = coefficient_exponent_parts[1];
+                        if (exponent_string.isEmpty()) {
+                            exponent_array[i] = 1;
+                        } else {
+                            exponent_array[i] = Integer.parseInt(exponent_string);
+                        }
+                    }
+                    else if (coefficient_exponent_parts.length == 1) {
+                        // This is just "x" or coefficient+"x" with exponent 1
+                        String coefficient_string = coefficient_exponent_parts[0];
+                        if (coefficient_string.isEmpty() || coefficient_string.equals("+")) {
+                            new_coefficient[i] = 1.0;
+                        } else if (coefficient_string.equals("-")) {
+                            new_coefficient[i] = -1.0;
+                        } else {
+                            new_coefficient[i] = Double.parseDouble(coefficient_string);
+                        }
+                        exponent_array[i] = 1;
+                    }
+                    else {
+                        // This should be just "x" (coefficient is empty)
+                        new_coefficient[i] = 1.0;
+                        exponent_array[i] = 1;
+                    }
+                }
+                else{
+                    // Constant term
+                    if (!current_term.isEmpty()) {
+                        new_coefficient[i] = Double.parseDouble(current_term);
+                        exponent_array[i] = 0;
+                    } else {
+                        new_coefficient[i] = 0.0;
+                        exponent_array[i] = 0;
+                    }
+                }
+            }
+            this.coefficients = new_coefficient;
+            this.exponents = exponent_array;
         } catch (FileNotFoundException e) {
-            System.err.println("File not found: " + e.getMessage());
-            // Initialize as zero polynomial
-            this.co = new double[1];
-            this.co_i = new int[1];
-            this.co[0] = 0.0;
-            this.co_i[0] = 0;
+            System.err.println("Error: File not found - " + f.getAbsolutePath());
+            throw new RuntimeException("Unable to create polynomial from file: " + f.getName(), e);
         }
-    }
-    
-    private void parsePolynomialString(String pol) {
-        // Handle negative signs by adding + before them
-        String modPol = pol.replaceAll("-", "+-");
-        // Remove leading + if it exists
-        if (modPol.startsWith("+")) {
-            modPol = modPol.substring(1);
-        }
-        String[] terms = modPol.split("\\+");
-        
-        // Filter out empty terms
-        java.util.List<String> nonEmptyTerms = new java.util.ArrayList<>();
-        for (String term : terms) {
-            if (!term.trim().isEmpty()) {
-                nonEmptyTerms.add(term.trim());
-            }
-        }
-        
-        int termNum = nonEmptyTerms.size();
-        double[] coe = new double[termNum];
-        int[] fr = new int[termNum];
-        
-        for (int i = 0; i < termNum; i++) {
-            String ter = nonEmptyTerms.get(i);
-            if (ter.contains("x")) {
-                String[] cf = ter.split("x");
-                switch (cf.length) {
-                    case 2 -> {
-                        // Case: coefficient + x + exponent
-                        String coeffStr = cf[0];
-                        coe[i] = switch (coeffStr) {
-                            case "", "+" -> 1.0;
-                            case "-" -> -1.0;
-                            default -> Double.parseDouble(coeffStr);
-                        };
-                        fr[i] = Integer.parseInt(cf[1]);
-                    }
-                    case 1 -> {
-                        // Case: coefficient + x (exponent = 1)
-                        String coeffStr2 = cf[0];
-                        coe[i] = switch (coeffStr2) {
-                            case "", "+" -> 1.0;
-                            case "-" -> -1.0;
-                            default -> Double.parseDouble(coeffStr2);
-                        };
-                        fr[i] = 1;
-                    }
-                    default -> {
-                        // Case: just x (coefficient = 1, exponent = 1)
-                        coe[i] = 1.0;
-                        fr[i] = 1;
-                    }
-                }
-            } else {
-                // Constant term
-                coe[i] = Double.parseDouble(ter);
-                fr[i] = 0;
-            }
-        }
-        this.co = coe;
-        this.co_i = fr;
     }
 
-    public void saveToFile(String fn){
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fn))) {
-            String pol = buildPolynomialString();
-            writer.write(pol);
+    public void saveToFile(String file_name){
+        File file = new File(file_name);
+        try {
+            file.createNewFile();
+            String polynomial_string ="";
+            for(int i = 0; i < this.coefficients.length - 1; ++i){
+                if(exponents[i] == 0){
+                    polynomial_string = polynomial_string + coefficients[i] + "+";
+                }
+                else if (exponents[i] == 1){
+                    polynomial_string = polynomial_string + coefficients[i] + "x" + "+";
+                }
+                else{
+                    polynomial_string = polynomial_string + coefficients[i] + "x" + exponents[i] + "+";
+                }
+            }
+            polynomial_string = polynomial_string + coefficients[this.coefficients.length - 1] + "x" + exponents[this.exponents.length - 1];
+            polynomial_string = polynomial_string.replaceAll("\\+-", "-");
+            
+            try (FileWriter file_writer = new FileWriter(file);
+                 BufferedWriter buffered_writer = new BufferedWriter(file_writer)) {
+                buffered_writer.write(polynomial_string);
+            }
         } catch(IOException e){
-            System.err.println("Error writing to file: " + e.getMessage());
+            System.err.println("Error: Unable to save polynomial to file: " + file_name);
+            System.err.println("Reason: " + e.getMessage());
+            throw new RuntimeException("Failed to save polynomial to file", e);
         }
     }
-    
-    private String buildPolynomialString() {
-        if (co.length == 0) {
-            return "0";
+
+    public Polynomial add(Polynomial polynomial_to_add) {
+        int this_max_exponent = this.exponents[this.exponents.length - 1];
+        int other_max_exponent = polynomial_to_add.exponents[polynomial_to_add.exponents.length - 1];
+        int result_array_length = Math.max(this_max_exponent, other_max_exponent) + 1;
+
+        double[] coefficient_sum_array = new double[result_array_length];
+
+        for (int i = 0; i < this.exponents.length; ++i){
+            coefficient_sum_array[this.exponents[i]] = this.coefficients[i];
         }
-        
-        StringBuilder pol = new StringBuilder();
-        
-        for (int i = 0; i < co.length; i++) {
-            double coeff = co[i];
-            int exp = co_i[i];
-            
-            // Skip zero coefficients
-            if (coeff == 0) {
-                continue;
-            }
-            
-            // Add + for positive coefficients (except the first term)
-            if (i > 0 && coeff > 0) {
-                pol.append("+");
-            }
-            
-            // Handle coefficient
-            if (exp == 0) {
-                // Constant term
-                pol.append(coeff);
-            } else if (coeff == 1.0) {
-                // Coefficient is 1, don't show it unless it's a constant
-                if (exp == 1) {
-                    pol.append("x");
-                } else {
-                    pol.append("x").append(exp);
-                }
-            } else if (coeff == -1.0) {
-                // Coefficient is -1, show only the minus sign
-                if (exp == 1) {
-                    pol.append("-x");
-                } else {
-                    pol.append("-x").append(exp);
-                }
-            } else {
-                // General case
-                pol.append(coeff);
-                if (exp == 1) {
-                    pol.append("x");
-                } else {
-                    pol.append("x").append(exp);
-                }
+
+        for (int j = 0; j < polynomial_to_add.exponents.length; ++j){
+            coefficient_sum_array[polynomial_to_add.exponents[j]] = coefficient_sum_array[polynomial_to_add.exponents[j]] + polynomial_to_add.coefficients[j];
+        }
+
+        int non_zero_count = 0;
+        for (int p = 0; p < result_array_length; ++p){
+            if (coefficient_sum_array[p] != 0){
+                non_zero_count += 1;
             }
         }
-        
-        return pol.length() == 0 ? "0" : pol.toString();
+
+        double[] final_coefficients = new double[non_zero_count];
+        int[] final_exponents = new int[non_zero_count];
+        int index = 0;
+        for(int k = 0; k < result_array_length; ++k){
+            if(coefficient_sum_array[k] != 0){
+                final_coefficients[index] = coefficient_sum_array[k];
+                final_exponents[index] = k;
+                index += 1;
+            }
+        }
+
+        Polynomial result_polynomial = new Polynomial(final_coefficients, final_exponents);
+        return result_polynomial;
     }
 
-    public Polynomial add(Polynomial a) {
-        int thisLen = this.co_i[this.co_i.length - 1];
-        int aLen = a.co_i[a.co_i.length - 1];
-        int newLen = Math.max(thisLen, aLen) + 1;
+    public double evaluate(double x_value) {
+        int coefficient_count = this.coefficients.length;
+        double polynomial_result = 0.0d;
 
-        double[] add_co = new double[newLen];
-
-        for (int i = 0; i < this.co_i.length; ++i){
-            add_co[this.co_i[i]] = this.co[i];
+        for (int i = 0; i < coefficient_count; ++i){
+            polynomial_result = polynomial_result + this.coefficients[i] * (Math.pow(x_value, this.exponents[i]));
         }
 
-        for (int j = 0; j < a.co_i.length; ++j){
-            add_co[a.co_i[j]] = add_co[a.co_i[j]] + a.co[j];
-        }
-
-        int no_zero = 0;
-        for (int p = 0; p < newLen; ++p){
-            if (add_co[p] != 0){
-                no_zero += 1;
-            }
-        }
-
-        double[] true_add_co = new double[no_zero];
-        int[] true_add_co_i = new int[no_zero];
-        int t = 0;
-        for(int k = 0; k < newLen; ++k){
-            if(add_co[k] != 0){
-                true_add_co[t] = add_co[k];
-                true_add_co_i[t] = k;
-                t += 1;
-            }
-        }
-
-        Polynomial newp = new Polynomial(true_add_co, true_add_co_i);
-        return newp;
+        return polynomial_result;
     }
 
-    public double evaluate(double x) {
-        int len = this.co.length;
-        double result = 0.0d;
-
-        for (int i = 0; i < len; ++i){
-            result = result + this.co[i] * (Math.pow(x, this.co_i[i]));
-        }
-
-        return result;
+    public boolean hasRoot(double x_value) {
+        double evaluation_result = evaluate(x_value);
+        return evaluation_result == 0.0d;
     }
 
-    public boolean hasRoot(double x) {
-        double e = evaluate(x);
-        return e == 0.0d;
-    }
+    public Polynomial multiply(Polynomial polynomial_to_multiply) {
+        int this_max_exponent = this.exponents[this.exponents.length - 1];
+        int other_max_exponent = polynomial_to_multiply.exponents[polynomial_to_multiply.exponents.length - 1];
+        int result_array_length = this_max_exponent + other_max_exponent + 1;
+        double[] product_coefficient_array = new double[result_array_length];
 
-    public Polynomial multiply(Polynomial jyf) {
-        int thisLen = this.co_i[this.co_i.length - 1];
-        int jLen = jyf.co_i[jyf.co_i.length - 1];
-        int newLen = thisLen + jLen + 1;
-        double[] new_mul_co = new double[newLen];
-
-        for (int i = 0; i < this.co.length; ++i){
-            double ic = this.co[i];
-            for (int j = 0; j < jyf.co.length; ++j) {
-                new_mul_co[this.co_i[i] + jyf.co_i[j]] = new_mul_co[this.co_i[i] + jyf.co_i[j]] + ic * jyf.co[j];
+        for (int i = 0; i < this.coefficients.length; ++i){
+            double current_coefficient = this.coefficients[i];
+            for (int j = 0; j < polynomial_to_multiply.coefficients.length; ++j) {
+                product_coefficient_array[this.exponents[i] + polynomial_to_multiply.exponents[j]] = product_coefficient_array[this.exponents[i] + polynomial_to_multiply.exponents[j]] + current_coefficient * polynomial_to_multiply.coefficients[j];
             }
         }
 
-        int no_zero = 0;
-        for (int p = 0; p < newLen; ++p){
-            if (new_mul_co[p] != 0){
-                no_zero += 1;
+        int non_zero_count = 0;
+        for (int p = 0; p < result_array_length; ++p){
+            if (product_coefficient_array[p] != 0){
+                non_zero_count += 1;
             }
         }
 
-        double[] true_mul_co = new double[no_zero];
-        int[] true_mul_co_i = new int[no_zero];
-        int t = 0;
-        for(int k = 0; k < newLen; ++k){
-            if(new_mul_co[k] != 0){
-                true_mul_co[t] = new_mul_co[k];
-                true_mul_co_i[t] = k;
-                t += 1;
+        double[] final_coefficients = new double[non_zero_count];
+        int[] final_exponents = new int[non_zero_count];
+        int index = 0;
+        for(int k = 0; k < result_array_length; ++k){
+            if(product_coefficient_array[k] != 0){
+                final_coefficients[index] = product_coefficient_array[k];
+                final_exponents[index] = k;
+                index += 1;
             }
         }
-        Polynomial nmp = new Polynomial(true_mul_co, true_mul_co_i);
-        return nmp;
+        Polynomial result_polynomial = new Polynomial(final_coefficients, final_exponents);
+        return result_polynomial;
     }
 }
