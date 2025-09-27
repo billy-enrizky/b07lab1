@@ -10,8 +10,8 @@ public class Polynomial {
     int[] exponents;
 
     public Polynomial() {
-        this.coefficients = new double[]{0.0};
-        this.exponents = new int[]{0};
+        this.coefficients = new double[1];
+        this.exponents = new int[1];
     }
 
     public Polynomial(double[] new_coefficient, int[] new_exponent) {
