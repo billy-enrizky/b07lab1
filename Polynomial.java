@@ -120,28 +120,34 @@ public class Polynomial {
         try {
             file.createNewFile();
             String polynomial_string ="";
-            for(int i = 0; i < this.coefficients.length - 1; ++i){
-                if(exponents[i] == 0){
-                    polynomial_string = polynomial_string + coefficients[i] + "+";
+            
+            // Handle empty polynomial
+            if (this.coefficients.length == 0) {
+                polynomial_string = "0";
+            } else {
+                for(int i = 0; i < this.coefficients.length - 1; ++i){
+                    if(exponents[i] == 0){
+                        polynomial_string = polynomial_string + coefficients[i] + "+";
+                    }
+                    else if (exponents[i] == 1){
+                        polynomial_string = polynomial_string + coefficients[i] + "x" + "+";
+                    }
+                    else{
+                        polynomial_string = polynomial_string + coefficients[i] + "x" + exponents[i] + "+";
+                    }
                 }
-                else if (exponents[i] == 1){
-                    polynomial_string = polynomial_string + coefficients[i] + "x" + "+";
+                
+                // Handle the last term properly
+                int lastIndex = this.coefficients.length - 1;
+                if(exponents[lastIndex] == 0){
+                    polynomial_string = polynomial_string + coefficients[lastIndex];
+                }
+                else if (exponents[lastIndex] == 1){
+                    polynomial_string = polynomial_string + coefficients[lastIndex] + "x";
                 }
                 else{
-                    polynomial_string = polynomial_string + coefficients[i] + "x" + exponents[i] + "+";
+                    polynomial_string = polynomial_string + coefficients[lastIndex] + "x" + exponents[lastIndex];
                 }
-            }
-            
-            // Handle the last term properly
-            int lastIndex = this.coefficients.length - 1;
-            if(exponents[lastIndex] == 0){
-                polynomial_string = polynomial_string + coefficients[lastIndex];
-            }
-            else if (exponents[lastIndex] == 1){
-                polynomial_string = polynomial_string + coefficients[lastIndex] + "x";
-            }
-            else{
-                polynomial_string = polynomial_string + coefficients[lastIndex] + "x" + exponents[lastIndex];
             }
             
             polynomial_string = polynomial_string.replaceAll("\\+-", "-");
